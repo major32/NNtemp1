@@ -22,7 +22,7 @@ def CreateNN():
     univariate_past_history = 500
     univariate_future_target = 1
     #uni_data = pd.read_csv("E:/install/15mkline.csv")
-    uni_data = pd.read_csv("E:/install/15mkline.csv").tail(50000).head(45000)
+    uni_data = pd.read_csv("E:/install/15mkline.csv").tail(5000).head(4500)
     #uni_data = pd.read_csv("E:/install/15mkline.csv").tail(116000)
     uni_data = uni_data.set_index('<DATE>')
     uni_data.index = pd.to_datetime(uni_data.index)
@@ -70,15 +70,14 @@ def CreateNN():
     ])
     """
     simple_lstm_model = build_lstm_model(input_data=x_train_uni.shape[-2:])
-    simple_lstm_model.compile(optimizer='adam', loss='mape', metrics=['mean_absolute_error'])
+    simple_lstm_model.compile(optimizer='adam', loss='MSLE', metrics=['mean_absolute_error'])
     # show_plot([x_train_uni[0], y_train_uni[0]], 0, 'Sample Example')
     EVALUATION_INTERVAL = 100  #100
-    EPOCHS = 60 #20
+    EPOCHS = 40 #20
 
 
     #Почистить папку с логами
-
-    import os, shutil
+    import shutil
     folder = 'E:/install/models/logs/'
     for filename in os.listdir(folder):
         file_path = os.path.join(folder, filename)
@@ -119,8 +118,8 @@ def CreateNN():
                           steps_per_epoch=EVALUATION_INTERVAL,
                           validation_data=val_univariate, validation_steps=50, verbose=1, shuffle=True,
                           callbacks=[
-                              early_stopping,
-                              #model_checkpoint,
+                              #early_stopping,
+                              model_checkpoint,
                               tensorboard
                           ]
                           )
@@ -132,6 +131,8 @@ def CreateNN():
     for x, y in val_univariate.take(3):
         predic =  simple_lstm_model.predict(x)[0]
         print("predic:",predic)
+        #print('X:', x[0].numpy())
+        #print('Y:', y[0].numpy())
         plot = show_plot([x[0].numpy(), y[0].numpy(),
                           predic], 0, 'Simple LSTM model')
         #print("MAE: ", mean_absolute_error(simple_lstm_model.predict(x).numpy(), y[0].numpy()))
@@ -141,7 +142,7 @@ def CreateNN():
 
 #loss='mse'
 def build_lstm_model(input_data, output_size=1, neurons=500, neurons2=2499, activ_func='linear',
-                     dropout=0.3, loss='mae', optimizer='adam'):
+                     dropout=0.01, loss='mae', optimizer='adam'):
     model = Sequential()
     model.add(LSTM(units=neurons, input_shape=input_data, return_sequences=True))
     model.add(Dropout(dropout))
@@ -200,7 +201,6 @@ def baseline(history):
     return np.mean(history)
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     #from tensorflow.python.client import device_lib
     #print(device_lib.list_local_devices())
