@@ -22,7 +22,7 @@ def CreateNN():
     univariate_past_history = 500
     univariate_future_target = 1
     #uni_data = pd.read_csv("E:/install/15mkline.csv")
-    uni_data = pd.read_csv("E:/install/15mkline.csv").tail(70000).head(65000)
+    uni_data = pd.read_csv("E:/install/15mkline.csv").tail(50000).head(45000)
     #uni_data = pd.read_csv("E:/install/15mkline.csv").tail(116000)
     uni_data = uni_data.set_index('<DATE>')
     uni_data.index = pd.to_datetime(uni_data.index)
@@ -70,26 +70,42 @@ def CreateNN():
     ])
     """
     simple_lstm_model = build_lstm_model(input_data=x_train_uni.shape[-2:])
-    simple_lstm_model.compile(optimizer='adam', loss='mae', metrics=['mean_absolute_error'])
+    simple_lstm_model.compile(optimizer='adam', loss='mape', metrics=['mean_absolute_error'])
     # show_plot([x_train_uni[0], y_train_uni[0]], 0, 'Sample Example')
     EVALUATION_INTERVAL = 100  #100
     EPOCHS = 60 #20
 
+
+    #Почистить папку с логами
+
+    import os, shutil
+    folder = 'E:/install/models/logs/'
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+
     # Если ошибка не уменьшается на протяжении указанного количества эпох, то процесс обучения прерывается и модель инициализируется
     # весами с самым низким показателем параметра "monitor"
     early_stopping = tf.keras.callbacks.EarlyStopping(
-        monitor='val_loss',
+        monitor='val_mean_absolute_error',
         # указывается параметр, по которому осуществляется ранняя остановка. Обычно это функция потреть на валидационном наборе (val_loss)
         patience=5,  # количество эпох по истечении которых закончится обучение, если показатели не улучшатся
         mode='min',  # указывает, в какую сторону должна быть улучшена ошибка
         restore_best_weights=True
-        # если параметр установлен в true, то по окончании обучения модель будет инициализирована весами с самым низким показателем параметра "monitor"
+        # если параметр установлен в true, то по окончании обучения модель будет
+        # инициализирована весами с самым низким показателем параметра "monitor"
     )
 
     # Сохраняет модель для дальнейшей загрузки
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
         filepath="E:/install/models/",  # путь к папке, где будет сохранена модель
-        monitor='val_loss',
+        monitor='val_mean_absolute_error',
         save_best_only=True,  # если параметр установлен в true, то сохраняется только лучшая модель
         mode='min'
     )
@@ -104,7 +120,7 @@ def CreateNN():
                           validation_data=val_univariate, validation_steps=50, verbose=1, shuffle=True,
                           callbacks=[
                               early_stopping,
-                              model_checkpoint,
+                              #model_checkpoint,
                               tensorboard
                           ]
                           )
@@ -115,10 +131,10 @@ def CreateNN():
 
     for x, y in val_univariate.take(3):
         predic =  simple_lstm_model.predict(x)[0]
-        print(predic)
+        print("predic:",predic)
         plot = show_plot([x[0].numpy(), y[0].numpy(),
                           predic], 0, 'Simple LSTM model')
-        #print("MAE: ", mean_absolute_error(simple_lstm_model.predict(x)[0], y_val_uni))
+        #print("MAE: ", mean_absolute_error(simple_lstm_model.predict(x).numpy(), y[0].numpy()))
         plot.show()
 
     #simple_lstm_model.save("D:/Nerualsnapshot/temp.h5")
